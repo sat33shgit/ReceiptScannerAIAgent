@@ -63,13 +63,14 @@ python scan_receipt_gcp.py Costco_1.jpg
 
 ## Supported Receipt Formats
 
-- **Store Names**: Costco, Walmart, Save On Foods, London Drugs, Hmart, Superstore
-- **Date Formats**: YYYY/MM/DD, M/D/YY, MM/DD/YYYY
+- **Store Names**: Costco, Walmart, Save On Foods, London Drugs, Hmart, Superstore, Pharmasave, Canadian Tire, Old Navy
+- **Date Formats**: YYYY/MM/DD, M/D/YY, MM/DD/YYYY, YYYY-MM-DD
 - **Currency**: CAD (Canadian Dollar)
+- **Amount Range**: Successfully tested from CAD 22.03 to CAD 638.39
 
 ## Testing Results
 
-The agent has been tested with real receipt images and achieves 100% accuracy:
+The agent has been tested with real receipt images and achieves 100% accuracy across 6 different store types:
 
 ### Test Case 1: Costco Receipt
 - **Store Name**: Costco ✅
@@ -80,6 +81,28 @@ The agent has been tested with real receipt images and achieves 100% accuracy:
 - **Store Name**: London Drugs ✅
 - **Total Amount**: CAD 101.17 ✅
 - **Date**: 7/20/2025 ✅
+
+### Test Case 3: Walmart Receipt
+- **Store Name**: Walmart ✅
+- **Total Amount**: CAD 47.80 ✅
+- **Date**: 05/16/2025 ✅
+
+### Test Case 4: Pharmasave Receipt
+- **Store Name**: Pharmasave ✅
+- **Total Amount**: CAD 72.63 ✅
+- **Date**: 2024-12-26 ✅
+
+### Test Case 5: Old Navy Receipt
+- **Store Name**: OLD NAVY - 03326 ✅
+- **Total Amount**: CAD 22.03 ✅
+- **Date**: 05/03/2025 ✅
+
+### Test Case 6: Canadian Tire Receipt
+- **Store Name**: Canadian Tire ✅
+- **Total Amount**: CAD 638.39 ✅
+- **Date**: 2020/08/14 ✅
+
+**Overall Performance: 100% accuracy (18/18 fields)**
 
 ## How It Works
 
