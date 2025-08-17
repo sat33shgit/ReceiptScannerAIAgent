@@ -10,7 +10,8 @@ from typing import Dict, Optional
 def extract_store_name(text: str) -> Optional[str]:
     known_stores = [
         "COSTCO WHOLESALE", "COSTCO", "WALMART", "SAVE ON FOODS", "HMART", 
-        "LONDON DRUGS LIMITED", "LONDON DRUGS", "SUPERSTORE"
+        "LONDON DRUGS LIMITED", "LONDON DRUGS", "SUPERSTORE", "PHARMASAVE",
+        "CANADIAN TIRE", "TRIANGLE"
     ]
     lines = [line.strip() for line in text.split('\n') if line.strip()]
     
@@ -30,8 +31,18 @@ def extract_store_name(text: str) -> Optional[str]:
                     return "Hmart"
                 elif "SUPERSTORE" in store:
                     return "Superstore"
+                elif "PHARMASAVE" in store:
+                    return "Pharmasave"
+                elif "CANADIAN TIRE" in store or "TRIANGLE" in store:
+                    return "Canadian Tire"
     
-    # fallback: first non-empty line
+    # fallback: first non-empty line that's not generic text
+    generic_headers = ["TRANSACTION RECORD", "RECEIPT", "CUSTOMER COPY", "MERCHANT COPY"]
+    for line in lines:
+        if line.upper() not in generic_headers and len(line.strip()) > 2:
+            return line
+    
+    # last resort: first non-empty line
     if lines:
         return lines[0]
     return None
