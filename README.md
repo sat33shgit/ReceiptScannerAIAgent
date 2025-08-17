@@ -22,8 +22,8 @@ An AI-powered receipt scanner that extracts key information from receipt images 
 
 1. Clone this repository:
    ```bash
-   git clone <repository-url>
-   cd RecieptScanner
+   git clone https://github.com/sat33shgit/ReceiptScannerAIAgent.git
+   cd ReceiptScannerAIAgent
    ```
 
 2. Install dependencies:
@@ -67,6 +67,33 @@ python scan_receipt_gcp.py Costco_1.jpg
 - **Date Formats**: YYYY/MM/DD, M/D/YY, MM/DD/YYYY
 - **Currency**: CAD (Canadian Dollar)
 
+## Testing Results
+
+The agent has been tested with real receipt images and achieves 100% accuracy:
+
+### Test Case 1: Costco Receipt
+- **Store Name**: Costco ✅
+- **Total Amount**: CAD 192.86 ✅  
+- **Date**: 2025/08/11 ✅
+
+### Test Case 2: London Drugs Receipt
+- **Store Name**: London Drugs ✅
+- **Total Amount**: CAD 101.17 ✅
+- **Date**: 7/20/2025 ✅
+
+## How It Works
+
+1. **Image Processing**: Uses Google Cloud Vision OCR to extract text from receipt images
+2. **Store Detection**: Scans the text for known store names and patterns
+3. **Amount Extraction**: Identifies total amounts using regex patterns and heuristics
+4. **Date Parsing**: Extracts dates in multiple formats with automatic year conversion
+
+## Error Handling
+
+- Handles missing or corrupted images gracefully
+- Returns `None` for fields that cannot be extracted
+- Provides informative error messages for API issues
+
 ## Files
 
 - `scan_receipt_gcp.py` - Main scanner using Google Cloud Vision OCR
@@ -81,6 +108,23 @@ python scan_receipt_gcp.py Costco_1.jpg
 3. Enable the Cloud Vision API
 4. Create a service account with Editor role
 5. Download the JSON key file
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/new-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/new-feature`)
+5. Create a Pull Request
+
+## Future Enhancements
+
+- [ ] Support for additional currencies (USD, EUR)
+- [ ] Tax amount extraction
+- [ ] Item-level parsing
+- [ ] Receipt categorization
+- [ ] Batch processing support
+- [ ] Web API interface
 
 ## License
 
