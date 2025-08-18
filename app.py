@@ -1,13 +1,34 @@
-from flask import Flask, request, render_template, jsonify
+"""
+Receipt Scanner AI Agent - REST API
+==================================
+
+A Flask-based REST API for receipt scanning using Google Cloud Vision OCR.
+This API can be called by any application to extract receipt information.
+
+Endpoints:
+- GET  /: Web interface for testing
+- POST /api/scan: JSON API for receipt scanning
+- GET  /api/health: Health check endpoint
+
+Author: Created with GitHub Copilot
+Repository: https://github.com/sat33shgit/ReceiptScannerAIAgent
+"""
+
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import os
 from google.cloud import vision
 import re
 from typing import Dict, Optional
-import base64
-import io
-from PIL import Image
+import json
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for cross-origin requests
 
 # Your existing extraction functions (same as before)
 def extract_store_name(text: str) -> Optional[str]:
@@ -127,13 +148,33 @@ def extract_date(text: str) -> Optional[str]:
 
 def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
     try:
-        client = vision.ImageAnnotatorClient()
+        # Initialize Google Cloud Vision client
+        # For Railway deployment, check for JSON content in environment variable
+        service_account_path = "service-account-key.json"
+        
+        if os.path.exists(service_account_path):
+            # Local development or file-based deployment
+            from google.oauth2 import service_account
+            credentials = service_account.Credentials.from_service_account_file(service_account_path)
+            client = vision.ImageAnnotatorClient(credentials=credentials)
+        elif os.environ.get('GOOGLE_CLOUD_KEY_JSON'):
+            # Railway deployment with JSON in environment variable
+            import json
+            from google.oauth2 import service_account
+            service_account_info = json.loads(os.environ.get('GOOGLE_CLOUD_KEY_JSON'))
+            credentials = service_account.Credentials.from_service_account_info(service_account_info)
+            client = vision.ImageAnnotatorClient(credentials=credentials)
+        else:
+            # Try default credentials (for Google Cloud deployment)
+            client = vision.ImageAnnotatorClient()
+        
         image = vision.Image(content=image_bytes)
         response = client.text_detection(image=image)
         texts = response.text_annotations
         
         if response.error.message:
-            raise Exception(f'{response.error.message}')
+            logger.error(f"Google Cloud Vision API error: {response.error.message}")
+            return {"error": f"OCR processing failed: {response.error.message}"}
         
         if texts:
             text = texts[0].description
@@ -144,32 +185,153 @@ def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
         total_amount = extract_total_amount(text)
         date = extract_date(text)
         
-        return {
-            "store_name": store_name,
-            "total_amount": total_amount,
-            "date": date
+        result = {
+            "success": True,
+            "data": {
+                "store_name": store_name,
+                "total_amount": total_amount,
+                "date": date
+            },
+            "raw_text": text[:500] if text else ""  # Limit raw text for API response
         }
         
+        logger.info(f"Successfully processed receipt: {store_name}, {total_amount}, {date}")
+        return result
+        
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Error processing receipt: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def allowed_file(filename: str) -> bool:
+    """Check if uploaded file has an allowed extension."""
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Receipt Scanner API</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .endpoint { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+            .method { background: #007bff; color: white; padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+            code { background: #e9ecef; padding: 2px 4px; border-radius: 3px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>Receipt Scanner AI Agent API</h1>
+            <p>A REST API for receipt scanning using Google Cloud Vision OCR.</p>
+            
+            <div class="endpoint">
+                <h3><span class="method">POST</span> /api/scan</h3>
+                <p>Extract store information from receipt image</p>
+                <p><strong>Request:</strong> multipart/form-data with 'receipt_image' field</p>
+                <p><strong>Supported formats:</strong> JPG, JPEG, PNG</p>
+                <p><strong>Max file size:</strong> 10MB</p>
+            </div>
+            
+            <div class="endpoint">
+                <h3><span class="method">GET</span> /api/health</h3>
+                <p>Health check endpoint</p>
+            </div>
+            
+            <h3>Example Response:</h3>
+            <pre><code>{
+  "success": true,
+  "data": {
+    "store_name": "Costco",
+    "total_amount": "CAD 45.67",
+    "date": "2024/01/15"
+  }
+}</code></pre>
+            
+            <p><strong>Repository:</strong> <a href="https://github.com/sat33shgit/ReceiptScannerAIAgent">GitHub</a></p>
+        </div>
+    </body>
+    </html>
+    """
 
-@app.route('/scan', methods=['POST'])
-def scan_receipt():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file uploaded'})
+@app.route('/api/health')
+def health_check():
+    """Health check endpoint for monitoring."""
+    return jsonify({
+        "status": "healthy",
+        "service": "Receipt Scanner AI Agent",
+        "version": "1.0.0"
+    }), 200
+
+@app.route('/api/scan', methods=['POST'])
+def scan_receipt_api():
+    """
+    Scan receipt from uploaded image and extract store information.
     
-    file = request.files['file']
+    Request:
+        - Method: POST
+        - Content-Type: multipart/form-data
+        - File field: 'receipt_image' (JPG, PNG supported)
+    
+    Response:
+        - JSON with extracted information
+        - Success: {"success": true, "data": {...}}
+        - Error: {"success": false, "error": "error message"}
+    """
+    if 'receipt_image' not in request.files:
+        return jsonify({
+            "success": False,
+            "error": "No receipt_image file provided. Please upload an image file."
+        }), 400
+    
+    file = request.files['receipt_image']
+    
     if file.filename == '':
-        return jsonify({'error': 'No file selected'})
+        return jsonify({
+            "success": False,
+            "error": "No file selected. Please choose an image file."
+        }), 400
     
-    image_bytes = file.read()
-    results = scan_receipt_from_image(image_bytes)
+    if not allowed_file(file.filename):
+        return jsonify({
+            "success": False,
+            "error": "Invalid file type. Please upload JPG, JPEG, or PNG files only."
+        }), 400
     
-    return jsonify(results)
+    try:
+        image_bytes = file.read()
+        
+        if len(image_bytes) == 0:
+            return jsonify({
+                "success": False,
+                "error": "Uploaded file is empty."
+            }), 400
+        
+        if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
+            return jsonify({
+                "success": False,
+                "error": "File too large. Maximum size is 10MB."
+            }), 400
+        
+        result = scan_receipt_from_image(image_bytes)
+        
+        if result.get("success"):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        logger.error(f"Error in /api/scan endpoint: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Server error: {str(e)}"
+        }), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    port = int(os.environ.get('PORT', 8080))
+    app.run(debug=False, host='0.0.0.0', port=port)

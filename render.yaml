@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: receipt-scanner-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    envVars:
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: service-account-key.json
