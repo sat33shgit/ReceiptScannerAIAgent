@@ -2,9 +2,10 @@
 
 An AI-powered receipt scanner that extracts key information from receipt images using Google Cloud Vision OCR. Available as both a web application and REST API for integration with other applications.
 
-## 🌐 **Live Demo**
-🔗 **Web App**: [Receipt Scanner AI Agent](https://receiptscanneraiagent.streamlit.app/)
-🔗 **API Documentation**: See [API Deployment Guide](API_DEPLOYMENT_GUIDE.md)
+## 🌐 **Live Deployments**
+🔗 **Web App**: [Receipt Scanner AI Agent](https://receiptscanneraiagent.streamlit.app/)  
+🔗 **REST API**: [https://receipt-scanner-api-lim0.onrender.com](https://receipt-scanner-api-lim0.onrender.com)  
+📋 **API Health Check**: [https://receipt-scanner-api-lim0.onrender.com/health](https://receipt-scanner-api-lim0.onrender.com/health)
 
 ## ✨ **Features**
 
@@ -14,8 +15,9 @@ An AI-powered receipt scanner that extracts key information from receipt images 
 - 🏬 **Multi-Store Support**: Costco, Walmart, London Drugs, Pharmasave, Canadian Tire, Old Navy, and more
 - 📱 **Mobile-Friendly**: Works on phones, tablets, and computers
 - ☁️ **Cloud-Deployed**: Access from anywhere with internet
-- 🔗 **REST API**: Integrate with your own applications
+- 🔗 **REST API**: Production-ready API with CORS support and comprehensive error handling
 - ⚡ **100% Accuracy**: Tested across 6+ major store types
+- 🚀 **Multiple Deployment Options**: Streamlit web app and standalone Flask API
 
 ## 🚀 **Quick Start**
 
@@ -25,13 +27,27 @@ An AI-powered receipt scanner that extracts key information from receipt images 
 3. Get instant results!
 
 ### Option 2: Use the REST API (For Developers/Apps)
+
+**API Base URL**: `https://receipt-scanner-api-lim0.onrender.com`
+
+#### Available Endpoints:
+- `GET /` - API documentation and endpoint list
+- `GET /health` - Health check endpoint
+- `POST /api/scan` - Receipt scanning endpoint
+
+#### Example Usage:
 ```python
 import requests
 
-# Example API integration
+# Health check
+response = requests.get('https://receipt-scanner-api-lim0.onrender.com/health')
+print(response.json())
+# Output: {"status": "healthy", "service": "Receipt Scanner API", "version": "1.0.0"}
+
+# Scan receipt
 with open('receipt.jpg', 'rb') as image_file:
     files = {'receipt_image': image_file}
-    response = requests.post('YOUR_API_URL/api/scan', files=files)
+    response = requests.post('https://receipt-scanner-api-lim0.onrender.com/api/scan', files=files)
     result = response.json()
 
 if result.get('success'):
@@ -39,6 +55,16 @@ if result.get('success'):
     print(f"Store: {data['store_name']}")
     print(f"Amount: {data['total_amount']}")
     print(f"Date: {data['date']}")
+```
+
+#### cURL Example:
+```bash
+# Health check
+curl https://receipt-scanner-api-lim0.onrender.com/health
+
+# Upload receipt
+curl -X POST https://receipt-scanner-api-lim0.onrender.com/api/scan \
+  -F "receipt_image=@path/to/your/receipt.jpg"
 ```
 
 ### Option 3: Run Locally
@@ -62,10 +88,38 @@ if result.get('success'):
      set GOOGLE_APPLICATION_CREDENTIALS=c:\path\to\your\project\service-account-key.json
      ```
 
-## Usage
+## 🛠️ **Project Structure**
 
-Run the scanner on a receipt image:
+```
+RecieptScanner/
+├── streamlit_app.py               # Main Streamlit web application
+├── app.py                         # Flask REST API application
+├── app_minimal.py                 # Simplified Flask app for deployment
+├── app_simple.py                  # Alternative simplified Flask app
+├── scan_receipt_gcp.py            # Core OCR scanning logic
+├── test_deployed_api.py           # API testing script
+├── test_api.py                    # Local API testing script
+├── requirements.txt               # Python dependencies
+├── service-account-key.json       # Google Cloud credentials (not in repo)
+├── Procfile                       # Render deployment configuration
+├── runtime.txt                    # Python version specification
+├── render.yaml                    # Render deployment configuration
+├── templates/
+│   └── index.html                 # Flask app HTML template
+├── .streamlit/                    # Streamlit configuration
+└── *.jpg                          # Sample receipt images
+```
 
+## 🌐 **Deployment Architecture**
+
+- **Web App**: Deployed on Streamlit Cloud for easy user access and interactive UI
+- **REST API**: Deployed on Render with auto-scaling, health monitoring, and free tier hosting
+- **OCR Engine**: Google Cloud Vision API for high-accuracy text extraction
+- **CORS Support**: API configured for cross-origin requests from web applications
+
+## 💻 **Local Development**
+
+### Running the CLI Scanner
 ```bash
 python scan_receipt_gcp.py <image_path>
 ```
@@ -75,12 +129,56 @@ Example:
 python scan_receipt_gcp.py Costco_1.jpg
 ```
 
-### Sample Output:
+### Running the Flask API Locally
+```bash
+# Start the API server
+python app.py
+
+# The API will be available at http://localhost:5000
+```
+
+### Running the Streamlit App Locally
+```bash
+# Start the web app
+streamlit run streamlit_app.py
+
+# The app will open in your browser at http://localhost:8501
+```
+
+## 🧪 **API Testing**
+
+Use the included test script to verify API functionality:
+
+```bash
+python test_deployed_api.py
+```
+
+This script tests:
+- Health check endpoint
+- Home page endpoint  
+- Receipt scanning functionality
+
+## 📊 **API Response Format**
+
+### Successful Response:
 ```json
 {
-  "store_name": "Costco", 
-  "total_amount": "CAD 192.86", 
-  "date": "2025/08/11"
+  "success": true,
+  "data": {
+    "store_name": "Costco",
+    "total_amount": "CAD 192.86", 
+    "date": "2025/08/11"
+  },
+  "message": "Receipt processed successfully"
+}
+```
+
+### Error Response:
+```json
+{
+  "success": false,
+  "error": "Error message details",
+  "message": "Failed to process receipt"
 }
 ```
 
@@ -140,12 +238,29 @@ The agent has been tested with real receipt images and achieves 100% accuracy ac
 - Returns `None` for fields that cannot be extracted
 - Provides informative error messages for API issues
 
-## Files
+## 📁 **Key Files**
 
-- `scan_receipt_gcp.py` - Main scanner using Google Cloud Vision OCR
+### Core Application Files
+- `streamlit_app.py` - Main interactive web application with file upload UI
+- `app.py` - Production Flask REST API with comprehensive error handling
+- `app_minimal.py` - Simplified Flask API optimized for cloud deployment
+- `app_simple.py` - Alternative simplified Flask API version
+- `scan_receipt_gcp.py` - Core OCR scanning logic using Google Cloud Vision
+- `test_deployed_api.py` - Automated testing script for deployed API
+- `test_api.py` - Local API testing script
+
+### Configuration Files
+- `requirements.txt` - Python dependencies for deployment
+- `Procfile` - Render deployment configuration
+- `render.yaml` - Render deployment configuration file
+- `runtime.txt` - Python version specification
+- `service-account-key.json` - Google Cloud credentials (excluded from repo)
+
+### UI Files
+- `templates/index.html` - HTML template for Flask web interface
+
+### Legacy Files
 - `scan_receipt.py` - Legacy scanner using Tesseract (less accurate)
-- `requirements.txt` - Python dependencies
-- `service-account-key.json` - Google Cloud credentials (not included in repo)
 
 ## Google Cloud Setup
 
@@ -163,14 +278,27 @@ The agent has been tested with real receipt images and achieves 100% accuracy ac
 4. Push to the branch (`git push origin feature/new-feature`)
 5. Create a Pull Request
 
-## Future Enhancements
+## 🔮 **Future Enhancements**
 
 - [ ] Support for additional currencies (USD, EUR)
 - [ ] Tax amount extraction
-- [ ] Item-level parsing
-- [ ] Receipt categorization
-- [ ] Batch processing support
-- [ ] Web API interface
+- [ ] Item-level parsing with line items
+- [ ] Receipt categorization (grocery, retail, etc.)
+- [ ] Batch processing support for multiple receipts
+- [ ] Database integration for receipt storage
+- [ ] User authentication and receipt history
+- [ ] Email integration for receipt forwarding
+- [ ] Mobile app development (iOS/Android)
+- [ ] Receipt analytics and spending insights
+
+## 📈 **Recent Updates**
+
+- ✅ **v1.0.0**: Production-ready REST API deployed on Render
+- ✅ **Enhanced Error Handling**: Comprehensive error responses and logging
+- ✅ **CORS Support**: API accessible from web applications
+- ✅ **Health Monitoring**: Built-in health check endpoints
+- ✅ **Cloud Deployment**: Both Streamlit and Flask apps in production
+- ✅ **Automated Testing**: Test suite for API validation
 
 ## License
 
