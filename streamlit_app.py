@@ -1,10 +1,24 @@
+"""
+Receipt Scanner AI Agent
+========================
+
+A Streamlit web application that uses Google Cloud Vision API to extract:
+- Store name
+- Total amount (CAD)
+- Receipt date
+
+From uploaded receipt images.
+
+Author: Created with GitHub Copilot
+Repository: https://github.com/sat33shgit/ReceiptScannerAIAgent
+"""
+
 import streamlit as st
 import os
 from google.cloud import vision
 import re
 from typing import Dict, Optional
 from PIL import Image
-import io
 
 # Set page config
 st.set_page_config(

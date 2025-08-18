@@ -102,14 +102,18 @@ dmypy.json
 
 # Google Cloud credentials
 service-account-key.json
-*.json
 
-# Receipt images (for privacy)
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
+# Temporary files
+format_secrets.py
+temp_*
+test_*
+
+# Receipt images (for privacy) - excluding sample ones
+# *.jpg
+# *.jpeg  
+# *.png
+# *.gif
+# *.bmp
 
 # IDE files
 .vscode/
@@ -120,3 +124,6 @@ service-account-key.json
 # OS files
 .DS_Store
 Thumbs.db
+
+# Streamlit secrets (local development)
+.streamlit/secrets.toml

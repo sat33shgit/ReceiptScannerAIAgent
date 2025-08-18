@@ -1,24 +1,27 @@
-# Receipt Scanner AI Agent
+# Receipt Scanner AI Agent 🧾
 
-An AI-powered receipt scanner that extracts key information from receipt images using Google Cloud Vision OCR.
+An AI-powered receipt scanner web application that extracts key information from receipt images using Google Cloud Vision OCR.
 
-## Features
+## 🌐 **Live Demo**
+🔗 **Try it now**: [Receipt Scanner AI Agent](https://your-app-url.streamlit.app/) *(Replace with your actual Streamlit Cloud URL)*
 
-- **Store Name Extraction**: Identifies the store name from receipt headers
-- **Total Amount Extraction**: Finds the total amount with CAD currency
-- **Date Extraction**: Extracts receipt date in various formats
-- **Multi-Store Support**: Supports Costco, Walmart, Save On Foods, London Drugs, Hmart, Superstore, and more
+## ✨ **Features**
 
-## Prerequisites
+- 🏪 **Store Name Extraction**: Automatically identifies store names
+- 💰 **Total Amount Extraction**: Finds total amounts in CAD currency  
+- 📅 **Date Extraction**: Extracts receipt dates in various formats
+- 🏬 **Multi-Store Support**: Costco, Walmart, London Drugs, Pharmasave, Canadian Tire, Old Navy, and more
+- 📱 **Mobile-Friendly**: Works on phones, tablets, and computers
+- ☁️ **Cloud-Deployed**: Access from anywhere with internet
 
-1. **Python 3.7+**
-2. **Google Cloud Vision API**: 
-   - Create a Google Cloud project
-   - Enable Cloud Vision API
-   - Create a service account and download the JSON key
-3. **Required Python packages** (see requirements.txt)
+## 🚀 **Quick Start**
 
-## Setup
+### Option 1: Use the Live App (Recommended)
+1. Visit the live app URL above
+2. Upload a receipt image (JPG, JPEG, PNG)
+3. Get instant results!
+
+### Option 2: Run Locally
 
 1. Clone this repository:
    ```bash
