@@ -2,3 +2,5 @@ google-cloud-vision
 Pillow
 opencv-python
 streamlit
+flask
+gunicorn
