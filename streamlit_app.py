@@ -70,10 +70,15 @@ def extract_total_amount(text: str) -> Optional[str]:
     amount_candidates = []
     total_line_amount = None
     
-    cad_amount_regex = re.compile(r"(\$|CAD)[ ]?([\d,]+[\.,]\d{2})")
-    number_regex = re.compile(r"([\d,]+[\.,]\d{2})")
+    # Improved regex patterns to avoid false matches
+    cad_amount_regex = re.compile(r"(\$|CAD)\s?([\d,]+\.\d{2})")
+    number_regex = re.compile(r"(?<!\d)([\d,]+\.\d{2})(?!\d)")
     
     for line in lines:
+        # Skip lines that contain points/rewards to avoid false matches
+        if 'point' in line.lower() or 'p(' in line.lower() or 'p=' in line.lower():
+            continue
+            
         if 'total' in line.lower():
             match = cad_amount_regex.search(line)
             if match:
@@ -176,6 +181,14 @@ def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
                 
                 # Create credentials from Streamlit secrets
                 gcp_service_account = st.secrets["gcp_service_account"]
+                
+                # Validate required fields
+                required_fields = ['type', 'project_id', 'private_key', 'client_email', 'token_uri']
+                missing_fields = [field for field in required_fields if field not in gcp_service_account]
+                
+                if missing_fields:
+                    return {"error": f"Invalid Streamlit secrets configuration: Service account info was not in the expected format, missing fields {', '.join(missing_fields)}."}
+                
                 credentials = service_account.Credentials.from_service_account_info(
                     gcp_service_account
                 )
@@ -184,7 +197,7 @@ def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
                 return {"error": f"Invalid Streamlit secrets configuration: {str(e)}"}
         
         else:
-            return {"error": "No Google Cloud credentials found. Please ensure service-account-key.json exists in the project directory."}
+            return {"error": "No Google Cloud credentials found. Please ensure service-account-key.json exists in the project directory or configure Streamlit secrets properly."}
         
         # Create image object
         image = vision.Image(content=image_bytes)
@@ -274,45 +287,45 @@ def main():
                 # Show helpful setup instructions
                 st.markdown("### 🔧 Setup Instructions")
                 st.markdown("""
-                **For Local Testing (Current Setup):**
+                **For Streamlit Cloud Deployment (REQUIRED FOR ONLINE ACCESS):**
+                
+                The app needs Google Cloud Vision API credentials to work. Here's how to fix this:
+                
+                1. **Go to your Streamlit Cloud app dashboard**
+                2. **Click on your app settings** (gear icon)
+                3. **Navigate to the "Secrets" section** in the left sidebar
+                4. **Copy the following template and fill in your actual values:**
+                
+                ```toml
+                [gcp_service_account]
+                type = "service_account"
+                project_id = "ocrproject-469323"
+                private_key_id = "your-private-key-id-from-json-file"
+                private_key = "-----BEGIN PRIVATE KEY-----\\nYour private key here\\n-----END PRIVATE KEY-----\\n"
+                client_email = "vision-ocr-service@ocrproject-469323.iam.gserviceaccount.com"
+                client_id = "your-client-id-from-json-file"
+                auth_uri = "https://accounts.google.com/o/oauth2/auth"
+                token_uri = "https://oauth2.googleapis.com/token"
+                auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+                client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/vision-ocr-service%40ocrproject-469323.iam.gserviceaccount.com"
+                universe_domain = "googleapis.com"
+                ```
+                
+                5. **Important**: Copy the values from your `service-account-key.json` file
+                6. **Save the secrets** and the app will automatically restart
+                
+                **For Local Testing:**
                 ✅ **Good News**: Your `service-account-key.json` file is detected in the project directory!
                 
-                The app should automatically use this file. If you're still seeing errors:
-                
-                1. **Option 1**: Restart the Streamlit app completely:
-                   ```
-                   Ctrl+C to stop the app, then restart with:
-                   streamlit run streamlit_app.py
-                   ```
-                
-                2. **Option 2**: Set environment variable manually:
-                   ```
-                   set GOOGLE_APPLICATION_CREDENTIALS=c:\\Sateesh\\Projects\\RecieptScanner\\service-account-key.json
-                   ```
-                
-                **For Streamlit Cloud Deployment:**
-                1. Go to your app settings on Streamlit Cloud
-                2. Navigate to the "Secrets" section  
-                3. Add your complete Google Cloud service account JSON content in this format:
-                   ```toml
-                   [gcp_service_account]
-                   type = "service_account"
-                   project_id = "your-project-id"
-                   private_key_id = "your-private-key-id"
-                   private_key = "-----BEGIN PRIVATE KEY-----\\nYour private key here\\n-----END PRIVATE KEY-----\\n"
-                   client_email = "your-service-account@project.iam.gserviceaccount.com"
-                   client_id = "your-client-id"
-                   auth_uri = "https://accounts.google.com/o/oauth2/auth"
-                   token_uri = "https://oauth2.googleapis.com/token"
-                   auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
-                   client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/your-service-account%40project.iam.gserviceaccount.com"
-                   ```
-                   
-                **Troubleshooting:**
-                - Ensure your service account has "Cloud Vision API User" permissions
-                - Verify the JSON file is not corrupted
-                - Check that the Google Cloud Vision API is enabled in your project
+                If you're testing locally and still seeing errors:
+                ```bash
+                # Stop the app (Ctrl+C) then restart:
+                streamlit run streamlit_app.py
+                ```
                 """)
+                
+                # Show a sample of what the secrets should look like
+                st.info("💡 **Tip**: The values you need are in your local `service-account-key.json` file. Copy each field exactly as shown in that file.")
             else:
                 # Display results in a nice format
                 st.success("✅ Receipt processed successfully!")

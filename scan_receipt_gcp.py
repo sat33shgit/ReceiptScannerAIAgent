@@ -52,11 +52,15 @@ def extract_total_amount(text: str) -> Optional[str]:
     lines = [line for line in text.split('\n') if line.strip()]
     amount_candidates = []
     total_line_amount = None
-    # Regex for CAD amounts
-    cad_amount_regex = re.compile(r"(\$|CAD)[ ]?([\d,]+[\.,]\d{2})")
-    # Regex for numbers that look like totals
-    number_regex = re.compile(r"([\d,]+[\.,]\d{2})")
+    # Regex for CAD amounts - more precise to avoid false matches
+    cad_amount_regex = re.compile(r"(\$|CAD)\s?([\d,]+\.\d{2})")
+    # Regex for numbers that look like totals - must end with .XX and not be part of larger number
+    number_regex = re.compile(r"(?<!\d)([\d,]+\.\d{2})(?!\d)")
     for line in lines:
+        # Skip lines that contain points/rewards to avoid false matches
+        if 'point' in line.lower() or 'p(' in line.lower() or 'p=' in line.lower():
+            continue
+            
         # Prefer lines with 'total'
         if 'total' in line.lower():
             match = cad_amount_regex.search(line)
