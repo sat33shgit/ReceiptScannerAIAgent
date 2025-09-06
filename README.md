@@ -21,6 +21,7 @@ An AI-powered receipt scanner that extracts key information from receipt images 
 
 ## 🚀 **Quick Start**
 
+<<<<<<< HEAD
 
 ## 🚀 How to Run Locally (Flask & Streamlit)
 
@@ -87,6 +88,75 @@ with open('receipt.jpg', 'rb') as image_file:
 curl -X POST https://receipt-scanner-api-lim0.onrender.com/api/scan -F "receipt_image=@path/to/your/receipt.jpg"
 ```
 
+=======
+### Option 1: Use the Live Web App (Recommended for End Users)
+1. Visit [Receipt Scanner AI Agent](https://receiptscanneraiagent.streamlit.app/)
+2. Upload a receipt image (JPG, JPEG, PNG)
+3. Get instant results!
+
+### Option 2: Use the REST API (For Developers/Apps)
+
+**API Base URL**: `https://receipt-scanner-api-lim0.onrender.com`
+
+#### Available Endpoints:
+- `GET /` - API documentation and endpoint list
+- `GET /health` - Health check endpoint
+- `POST /api/scan` - Receipt scanning endpoint
+
+#### Example Usage:
+```python
+import requests
+
+# Health check
+response = requests.get('https://receipt-scanner-api-lim0.onrender.com/health')
+print(response.json())
+# Output: {"status": "healthy", "service": "Receipt Scanner API", "version": "1.0.0"}
+
+# Scan receipt
+with open('receipt.jpg', 'rb') as image_file:
+    files = {'receipt_image': image_file}
+    response = requests.post('https://receipt-scanner-api-lim0.onrender.com/api/scan', files=files)
+    result = response.json()
+
+if result.get('success'):
+    data = result.get('data')
+    print(f"Store: {data['store_name']}")
+    print(f"Amount: {data['total_amount']}")
+    print(f"Date: {data['date']}")
+```
+
+#### cURL Example:
+```bash
+# Health check
+curl https://receipt-scanner-api-lim0.onrender.com/health
+
+# Upload receipt
+curl -X POST https://receipt-scanner-api-lim0.onrender.com/api/scan \
+  -F "receipt_image=@path/to/your/receipt.jpg"
+```
+
+### Option 3: Run Locally
+
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/sat33shgit/ReceiptScannerAIAgent.git
+   cd ReceiptScannerAIAgent
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Set up Google Cloud credentials:
+   - Download your service account JSON key file
+   - Save it as `service-account-key.json` in the project directory
+   - Set the environment variable:
+     ```cmd
+     set GOOGLE_APPLICATION_CREDENTIALS=c:\path\to\your\project\service-account-key.json
+     ```
+
+>>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
 ## 🛠️ **Project Structure**
 
 ```

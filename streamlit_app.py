@@ -29,108 +29,81 @@ st.set_page_config(
 
 # Helper functions (same as your main script)
 def extract_store_name(text: str) -> Optional[str]:
-    import re
-    if not text:
-        lines = []
-    else:
-        lines = [line.strip() for line in text.split('\n') if line.strip()]
-    if not lines:
-        return None
-    # Robustly detect 'Hmart' even with OCR errors
-    hmart_pattern = re.compile(r'\b[hg][m][a][r][t]\b', re.IGNORECASE)
+    known_stores = [
+        "COSTCO WHOLESALE", "COSTCO", "WALMART", "SAVE ON FOODS", "HMART", 
+        "LONDON DRUGS LIMITED", "LONDON DRUGS", "SUPERSTORE", "PHARMASAVE",
+        "CANADIAN TIRE", "TRIANGLE"
+    ]
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    
     for line in lines:
-        if hmart_pattern.search(line):
-            return 'Hmart'
-    # Prioritize 'BC Ferries' if found anywhere (match variations)
-    bc_ferries_pattern = re.compile(r'bc\s*ferries', re.IGNORECASE)
+        for store in known_stores:
+            if store in line.upper():
+                if "LONDON DRUGS" in store:
+                    return "London Drugs"
+                elif "COSTCO" in store:
+                    return "Costco"
+                elif "WALMART" in store:
+                    return "Walmart"
+                elif "SAVE ON FOODS" in store:
+                    return "Save On Foods"
+                elif "HMART" in store:
+                    return "Hmart"
+                elif "SUPERSTORE" in store:
+                    return "Superstore"
+                elif "PHARMASAVE" in store:
+                    return "Pharmasave"
+                elif "CANADIAN TIRE" in store or "TRIANGLE" in store:
+                    return "Canadian Tire"
+    
+    generic_headers = ["TRANSACTION RECORD", "RECEIPT", "CUSTOMER COPY", "MERCHANT COPY"]
     for line in lines:
-        if bc_ferries_pattern.search(line):
-            return 'BC Ferries'
-    # Check for other known stores and keywords in all lines
-    for line in lines:
-        line_upper = line.upper()
-        if 'COSTCO' in line_upper:
-            return 'Costco'
-        elif 'WALMART' in line_upper:
-            return 'Walmart'
-        elif 'LONDON DRUGS' in line_upper:
-            return 'London Drugs'
-        elif 'PHARMASAVE' in line_upper:
-            return 'Pharmasave'
-        elif 'CANADIAN TIRE' in line_upper:
-            return 'Canadian Tire'
-        elif 'OLD NAVY' in line_upper:
-            return 'Old Navy'
-        elif 'PETRO-CANADA' in line_upper or 'PETRO CANADA' in line_upper:
-            return 'Petro-Canada'
-        elif 'SAVE-ON-FOODS' in line_upper or 'SAVE ON FOODS' in line_upper:
-            return 'Save-On-Foods'
-        elif 'CARTER' in line_upper or 'OSHKOSH' in line_upper:
-            return line.strip()
-    # Fallback: avoid generic phrases like 'TRANSACTION RECORD'
-    for line in lines:
-        if line.strip() and line.strip().isupper() and 'TRANSACTION RECORD' not in line.upper():
-            return line.strip()
-    # Return first non-empty line if no known store found
-    return lines[0] if lines else None
+        if line.upper() not in generic_headers and len(line.strip()) > 2:
+            return line
+    
+    if lines:
+        return lines[0]
+    return None
 
 def extract_total_amount(text: str) -> Optional[str]:
-    # Specifically extract amount from 'Balance Due' or 'Credit' lines
-    import re
     lines = [line for line in text.split('\n') if line.strip()]
+    amount_candidates = []
+    total_line_amount = None
+    
+    # Improved regex patterns to avoid false matches
+    cad_amount_regex = re.compile(r"(\$|CAD)\s?([\d,]+\.\d{2})")
+    number_regex = re.compile(r"(?<!\d)([\d,]+\.\d{2})(?!\d)")
+    
     for line in lines:
-        if 'balance due' in line.lower():
-            match = re.search(r'(\d+\.\d{2})', line)
+        # Skip lines that contain points/rewards to avoid false matches
+        if 'point' in line.lower() or 'p(' in line.lower() or 'p=' in line.lower():
+            continue
+            
+        if 'total' in line.lower():
+            match = cad_amount_regex.search(line)
             if match:
-                try:
-                    amount = float(match.group(1))
-                    return f"CAD {amount:.2f}"
-                except:
-                    continue
-    for line in lines:
-        if 'credit' in line.lower():
-            match = re.search(r'(\d+\.\d{2})', line)
-            if match:
-                try:
-                    amount = float(match.group(1))
-                    return f"CAD {amount:.2f}"
-                except:
-                    continue
-    # Prefer amount from last matching keyword line, fallback to largest
-    keywords = ['mastercard', 'paid', 'total', 'amount']
-    candidate_amount = None
-    for line in lines:
-        line_lower = line.lower()
-        for kw in keywords:
-            if kw in line_lower:
-                match = re.search(r'(\d+\.\d{2})', line)
+                total_line_amount = f"CAD {match.group(2).replace(',', '')}"
+            else:
+                match = number_regex.search(line)
                 if match:
-                    try:
-                        amount = float(match.group(1))
-                        candidate_amount = amount
-                    except:
-                        continue
-    if candidate_amount is not None:
-        return f"CAD {candidate_amount:.2f}"
-    # Fallback: largest amount
-    patterns = [
-        r'Total Prepaid\s+(\d+\.\d{2})',
-        r'TOTAL.*?\$(\d+\.\d{2})',
-        r'TOTAL.*?(\d+\.\d{2})',
-        r'\$(\d+\.\d{2})',
-        r'(\d+\.\d{2})'
-    ]
-    amounts = []
-    for pattern in patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE)
-        for match in matches:
+                    total_line_amount = f"CAD {match.group(1).replace(',', '')}"
+        
+        for match in cad_amount_regex.finditer(line):
+            amount = float(match.group(2).replace(',', '').replace('$', '').replace('CAD', ''))
+            amount_candidates.append(amount)
+        
+        for match in number_regex.finditer(line):
             try:
-                amount = float(match)
-                amounts.append(amount)
+                amount = float(match.group(1).replace(',', ''))
+                amount_candidates.append(amount)
             except:
-                continue
-    if amounts:
-        max_amount = max(amounts)
+                pass
+    
+    if total_line_amount:
+        return total_line_amount
+    
+    if amount_candidates:
+        max_amount = max(amount_candidates)
         return f"CAD {max_amount:.2f}"
     return None
 

@@ -273,10 +273,17 @@
             
             // Create form data
             const formData = new FormData();
+<<<<<<< HEAD
             formData.append('receipt_image', file);
             
             // Send to server
             fetch('/api/scan', {
+=======
+            formData.append('file', file);
+            
+            // Send to server
+            fetch('/scan', {
+>>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
                 method: 'POST',
                 body: formData
             })
@@ -297,6 +304,7 @@
         }
         
         function showResults(data) {
+<<<<<<< HEAD
             document.getElementById('storeName').textContent = (data.data && data.data.store_name) || 'Not detected';
             document.getElementById('totalAmount').textContent = (data.data && data.data.total_amount) || 'Not detected';
             document.getElementById('date').textContent = (data.data && data.data.date) || 'Not detected';
@@ -315,6 +323,12 @@
                 results.parentNode.insertBefore(rawTextDiv, results.nextSibling);
             }
             rawTextDiv.innerHTML = '<b>Raw OCR Text:</b><br>' + (data.raw_text || 'No OCR text returned');
+=======
+            document.getElementById('storeName').textContent = data.store_name || 'Not detected';
+            document.getElementById('totalAmount').textContent = data.total_amount || 'Not detected';
+            document.getElementById('date').textContent = data.date || 'Not detected';
+            
+>>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
             results.style.display = 'block';
         }
         
