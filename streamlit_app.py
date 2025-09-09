@@ -155,44 +155,64 @@ def extract_total_amount(text: str) -> Optional[str]:
     return None
 
 def extract_date(text: str) -> Optional[str]:
-    lines = text.split('\n')
-    for line in lines:
-        timestamp_match = re.search(r'(\d{4})/(\d{1,2})/(\d{1,2})\s+\d{1,2}:\d{2}:\d{2}', line)
-        if timestamp_match:
-            year, month, day = timestamp_match.groups()
-            return f"{year}/{month}/{day}"
-        
-        short_date_match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{2})\s+\d{1,2}:\d{2}', line)
-        if short_date_match:
-            month, day, year = short_date_match.groups()
-            year_int = int(year)
-            if year_int <= 30:
-                year_int += 2000
-            else:
-                year_int += 1900
-            return f"{month}/{day}/{year_int}"
-    
-    date_patterns = [
-        r"(\d{4}[-/]\d{1,2}[-/]\d{1,2})",
-        r"(\d{1,2}[-/]\d{1,2}[-/]\d{4})",
-        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2})"
+    import re
+    import datetime
+    import calendar
+    if not text:
+        return None
+    patterns = [
+        r'(\d{4}-\d{2}-\d{2})',
+        r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})',
+        r'(\d{4}/\d{1,2}/\d{1,2})',
+        r'(\d{1,2}/\d{1,2}/\d{4})',
+        r'(\d{1,2}/\d{1,2}/\d{2})',
+        r'(\d{2} [A-Za-z]{3} \d{4})',  # e.g., 02 Sep 2025
+        r'([A-Za-z]{3}\s?\d{1,2}\'\d{2})'  # e.g., Aug31'25 or Aug 31'25
     ]
-    
-    for pattern in date_patterns:
-        match = re.search(pattern, text)
-        if match:
-            date_str = match.group(1)
-            if '/' in date_str:
-                parts = date_str.split('/')
-                if len(parts) == 3 and len(parts[2]) == 2:
-                    year = int(parts[2])
-                    if year <= 30:
-                        year += 2000
-                    else:
-                        year += 1900
-                    date_str = f"{parts[0]}/{parts[1]}/{year}"
-            return date_str
-    
+    matches = []
+    for pattern in patterns:
+        matches += re.findall(pattern, text)
+    for date_str in matches:
+        try:
+            if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
+                year, month, day = map(int, date_str.split('-'))
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
+                    return date_str
+            if re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', date_str):
+                year, month, day = map(int, date_str.split()[0].split('-'))
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
+                    return date_str.split()[0]
+            if re.match(r'\d{4}/\d{1,2}/\d{1,2}', date_str):
+                year, month, day = map(int, date_str.split('/'))
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
+                    return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
+            if re.match(r'\d{1,2}/\d{1,2}/\d{4}', date_str):
+                month, day, year = map(int, date_str.split('/'))
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
+                    return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
+            if re.match(r'\d{1,2}/\d{1,2}/\d{2}', date_str):
+                month, day, year = map(int, date_str.split('/'))
+                year += 2000
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
+                    return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
+            m = re.match(r'(\d{2}) ([A-Za-z]{3}) (\d{4})', date_str)
+            if m:
+                day, month_str, year = m.groups()
+                month = list(calendar.month_abbr).index(month_str[:3].title())
+                year = int(year)
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= int(day) <= 31:
+                    dt = datetime.date(year, month, int(day))
+                    return dt.strftime('%Y-%m-%d')
+            m = re.match(r'([A-Za-z]{3})\s?(\d{1,2})\'(\d{2})', date_str)
+            if m:
+                month_str, day, year = m.groups()
+                month = list(calendar.month_abbr).index(month_str[:3].title())
+                year = int(year) + 2000
+                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= int(day) <= 31:
+                    dt = datetime.date(year, month, int(day))
+                    return dt.strftime('%Y-%m-%d')
+        except:
+            continue
     return None
 
 def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
