@@ -21,74 +21,6 @@ An AI-powered receipt scanner that extracts key information from receipt images 
 
 ## 🚀 **Quick Start**
 
-<<<<<<< HEAD
-
-## 🚀 How to Run Locally (Flask & Streamlit)
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/sat33shgit/ReceiptScannerAIAgent.git
-cd ReceiptScannerAIAgent
-```
-
-### 2. Install Python Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Set Up Google Cloud Vision Credentials
-- Download your service account JSON key file from Google Cloud Console
-- Save it as `service-account-key.json` in the project directory
-- Set the environment variable (Windows):
-  ```cmd
-  set GOOGLE_APPLICATION_CREDENTIALS=c:\Sateesh\Projects\ReceiptScannerAIAgent\ReceiptScannerAIAgent-main\service-account-key.json
-  ```
-
-### 4. Run the Flask API Locally
-```cmd
-python app.py
-```
-- The API will be available at: http://localhost:5000
-- You can test with Postman, cURL, or the included HTML form at http://localhost:5000
-
-### 5. Run the Streamlit App Locally
-```cmd
-streamlit run streamlit_app.py
-```
-- The app will open in your browser at: http://localhost:8501
-- Upload a receipt image and view extracted results instantly
-
----
-## 🚀 How to Use the Live Web App (Streamlit Cloud)
-1. Visit: [Receipt Scanner AI Agent](https://receiptscanneraiagent.streamlit.app/)
-2. Upload a receipt image (JPG, JPEG, PNG)
-3. View results for store name, amount, and date
-
----
-## 🚀 How to Use the REST API (Render)
-
-**API Base URL**: `https://receipt-scanner-api-lim0.onrender.com`
-
-**Endpoints:**
-- `GET /` - API documentation
-- `GET /health` - Health check
-- `POST /api/scan` - Scan receipt
-
-**Python Example:**
-```python
-import requests
-with open('receipt.jpg', 'rb') as image_file:
-    files = {'receipt_image': image_file}
-    response = requests.post('https://receipt-scanner-api-lim0.onrender.com/api/scan', files=files)
-    print(response.json())
-```
-
-**cURL Example:**
-```bash
-curl -X POST https://receipt-scanner-api-lim0.onrender.com/api/scan -F "receipt_image=@path/to/your/receipt.jpg"
-```
-
-=======
 ### Option 1: Use the Live Web App (Recommended for End Users)
 1. Visit [Receipt Scanner AI Agent](https://receiptscanneraiagent.streamlit.app/)
 2. Upload a receipt image (JPG, JPEG, PNG)
@@ -156,7 +88,6 @@ curl -X POST https://receipt-scanner-api-lim0.onrender.com/api/scan \
      set GOOGLE_APPLICATION_CREDENTIALS=c:\path\to\your\project\service-account-key.json
      ```
 
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
 ## 🛠️ **Project Structure**
 
 ```

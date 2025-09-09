@@ -360,3 +360,393 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+"""
+Receipt Scanner AI Agent
+========================
+
+A Streamlit web application that uses Google Cloud Vision API to extract:
+- Store name
+- Total amount (CAD)
+- Receipt date
+
+From uploaded receipt images.
+
+Author: Created with GitHub Copilot
+Repository: https://github.com/sat33shgit/ReceiptScannerAIAgent
+"""
+
+import streamlit as st
+import os
+from google.cloud import vision
+import re
+from typing import Dict, Optional
+from PIL import Image
+
+# Set page config
+st.set_page_config(
+    page_title="Receipt Scanner AI Agent",
+    page_icon="🧾",
+    layout="wide"
+)
+
+# Helper functions (same as your main script)
+def extract_store_name(text: str) -> Optional[str]:
+    import re
+    if not text:
+        lines = []
+    else:
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+    if not lines:
+        return None
+    # Robustly detect 'Hmart' even with OCR errors
+    hmart_pattern = re.compile(r'\b[hg][m][a][r][t]\b', re.IGNORECASE)
+    for line in lines:
+        if hmart_pattern.search(line):
+            return 'Hmart'
+    # Prioritize 'BC Ferries' if found anywhere (match variations)
+    bc_ferries_pattern = re.compile(r'bc\s*ferries', re.IGNORECASE)
+    for line in lines:
+        if bc_ferries_pattern.search(line):
+            return 'BC Ferries'
+    # Check for other known stores and keywords in all lines
+    for line in lines:
+        line_upper = line.upper()
+        if 'COSTCO' in line_upper:
+            return 'Costco'
+        elif 'WALMART' in line_upper:
+            return 'Walmart'
+        elif 'LONDON DRUGS' in line_upper:
+            return 'London Drugs'
+        elif 'PHARMASAVE' in line_upper:
+            return 'Pharmasave'
+        elif 'CANADIAN TIRE' in line_upper:
+            return 'Canadian Tire'
+        elif 'OLD NAVY' in line_upper:
+            return 'Old Navy'
+        elif 'PETRO-CANADA' in line_upper or 'PETRO CANADA' in line_upper:
+            return 'Petro-Canada'
+        elif 'SAVE-ON-FOODS' in line_upper or 'SAVE ON FOODS' in line_upper:
+            return 'Save-On-Foods'
+        elif 'CARTER' in line_upper or 'OSHKOSH' in line_upper:
+            return line.strip()
+    # Fallback: avoid generic phrases like 'TRANSACTION RECORD'
+    for line in lines:
+        if line.strip() and line.strip().isupper() and 'TRANSACTION RECORD' not in line.upper():
+            return line.strip()
+    # Return first non-empty line if no known store found
+    return lines[0] if lines else None
+
+def extract_total_amount(text: str) -> Optional[str]:
+    # Specifically extract amount from 'Balance Due' or 'Credit' lines
+    import re
+    lines = [line for line in text.split('\n') if line.strip()]
+    for line in lines:
+        if 'balance due' in line.lower():
+            match = re.search(r'(\d+\.\d{2})', line)
+            if match:
+                try:
+                    amount = float(match.group(1))
+                    return f"CAD {amount:.2f}"
+                except:
+                    continue
+    for line in lines:
+        if 'credit' in line.lower():
+            match = re.search(r'(\d+\.\d{2})', line)
+            if match:
+                try:
+                    amount = float(match.group(1))
+                    return f"CAD {amount:.2f}"
+                except:
+                    continue
+    # Prefer amount from last matching keyword line, fallback to largest
+    keywords = ['mastercard', 'paid', 'total', 'amount']
+    candidate_amount = None
+    for line in lines:
+        line_lower = line.lower()
+        for kw in keywords:
+            if kw in line_lower:
+                match = re.search(r'(\d+\.\d{2})', line)
+                if match:
+                    try:
+                        amount = float(match.group(1))
+                        candidate_amount = amount
+                    except:
+                        continue
+    if candidate_amount is not None:
+        return f"CAD {candidate_amount:.2f}"
+    # Fallback: largest amount
+    patterns = [
+        r'Total Prepaid\s+(\d+\.\d{2})',
+        r'TOTAL.*?\$(\d+\.\d{2})',
+        r'TOTAL.*?(\d+\.\d{2})',
+        r'\$(\d+\.\d{2})',
+        r'(\d+\.\d{2})'
+    ]
+    amounts = []
+    for pattern in patterns:
+        matches = re.findall(pattern, text, re.IGNORECASE)
+        for match in matches:
+            try:
+                amount = float(match)
+                amounts.append(amount)
+            except:
+                continue
+    if amounts:
+        max_amount = max(amounts)
+        return f"CAD {max_amount:.2f}"
+    return None
+
+def extract_date(text: str) -> Optional[str]:
+    lines = text.split('\n')
+    for line in lines:
+        timestamp_match = re.search(r'(\d{4})/(\d{1,2})/(\d{1,2})\s+\d{1,2}:\d{2}:\d{2}', line)
+        if timestamp_match:
+            year, month, day = timestamp_match.groups()
+            return f"{year}/{month}/{day}"
+        
+        short_date_match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{2})\s+\d{1,2}:\d{2}', line)
+        if short_date_match:
+            month, day, year = short_date_match.groups()
+            year_int = int(year)
+            if year_int <= 30:
+                year_int += 2000
+            else:
+                year_int += 1900
+            return f"{month}/{day}/{year_int}"
+    
+    date_patterns = [
+        r"(\d{4}[-/]\d{1,2}[-/]\d{1,2})",
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{4})",
+        r"(\d{1,2}[-/]\d{1,2}[-/]\d{2})"
+    ]
+    
+    for pattern in date_patterns:
+        match = re.search(pattern, text)
+        if match:
+            date_str = match.group(1)
+            if '/' in date_str:
+                parts = date_str.split('/')
+                if len(parts) == 3 and len(parts[2]) == 2:
+                    year = int(parts[2])
+                    if year <= 30:
+                        year += 2000
+                    else:
+                        year += 1900
+                    date_str = f"{parts[0]}/{parts[1]}/{year}"
+            return date_str
+    
+    return None
+
+def scan_receipt_from_image(image_bytes) -> Dict[str, Optional[str]]:
+    try:
+        # Try local file first, then environment variable, then Streamlit secrets
+        client = None
+        
+        # First priority: Local service account file
+        service_account_path = "service-account-key.json"
+        if os.path.exists(service_account_path):
+            try:
+                from google.oauth2 import service_account
+                
+                # Load service account from local file
+                credentials = service_account.Credentials.from_service_account_file(
+                    service_account_path
+                )
+                client = vision.ImageAnnotatorClient(credentials=credentials)
+            except Exception as e:
+                return {"error": f"Error loading local service account file: {str(e)}"}
+        
+        # Second priority: Environment variable
+        elif os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'):
+            try:
+                client = vision.ImageAnnotatorClient()
+            except Exception as e:
+                return {"error": f"Error with environment variable credentials: {str(e)}"}
+        
+        # Third priority: Streamlit Cloud secrets
+        elif hasattr(st, 'secrets') and 'gcp_service_account' in st.secrets:
+            try:
+                from google.oauth2 import service_account
+                
+                # Create credentials from Streamlit secrets
+                gcp_service_account = st.secrets["gcp_service_account"]
+                
+                # Validate required fields
+                required_fields = ['type', 'project_id', 'private_key', 'client_email', 'token_uri']
+                missing_fields = [field for field in required_fields if field not in gcp_service_account]
+                
+                if missing_fields:
+                    return {"error": f"Invalid Streamlit secrets configuration: Service account info was not in the expected format, missing fields {', '.join(missing_fields)}."}
+                
+                credentials = service_account.Credentials.from_service_account_info(
+                    gcp_service_account
+                )
+                client = vision.ImageAnnotatorClient(credentials=credentials)
+            except Exception as e:
+                return {"error": f"Invalid Streamlit secrets configuration: {str(e)}"}
+        
+        else:
+            return {"error": "No Google Cloud credentials found. Please ensure service-account-key.json exists in the project directory or configure Streamlit secrets properly."}
+        
+        # Create image object
+        image = vision.Image(content=image_bytes)
+        
+        # Perform text detection
+        response = client.text_detection(image=image)
+        texts = response.text_annotations
+        
+        if response.error.message:
+            return {"error": f"Google Cloud Vision API error: {response.error.message}"}
+        
+        # Get the full text
+        if texts:
+            text = texts[0].description
+        else:
+            text = ""
+        
+        # Extract fields
+        store_name = extract_store_name(text)
+        total_amount = extract_total_amount(text)
+        date = extract_date(text)
+        
+        return {
+            "store_name": store_name,
+            "total_amount": total_amount,
+            "date": date,
+            "raw_text": text
+        }
+        
+    except Exception as e:
+        return {"error": str(e)}
+
+# Streamlit UI
+def main():
+    st.title("🧾 Receipt Scanner AI Agent")
+    st.markdown("Upload a receipt image to extract store name, total amount, and date")
+    
+    # Sidebar with info
+    with st.sidebar:
+        st.header("📊 Supported Stores")
+        st.write("✅ Costco")
+        st.write("✅ Walmart") 
+        st.write("✅ London Drugs")
+        st.write("✅ Pharmasave")
+        st.write("✅ Canadian Tire")
+        st.write("✅ Old Navy")
+        st.write("✅ Save On Foods")
+        st.write("✅ Hmart")
+        st.write("✅ Superstore")
+        
+        st.header("📅 Date Formats")
+        st.write("• YYYY/MM/DD")
+        st.write("• MM/DD/YYYY") 
+        st.write("• M/D/YY")
+        st.write("• YYYY-MM-DD")
+        
+        st.header("💰 Currency")
+        st.write("CAD (Canadian Dollar)")
+    
+    # File uploader
+    uploaded_file = st.file_uploader(
+        "Choose a receipt image", 
+        type=['jpg', 'jpeg', 'png'],
+        help="Upload a clear image of your receipt"
+    )
+    
+    if uploaded_file is not None:
+        # Display the image
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("📷 Uploaded Receipt")
+            image = Image.open(uploaded_file)
+            st.image(image, caption="Receipt Image", use_container_width=True)
+        
+        with col2:
+            st.subheader("🤖 Extraction Results")
+            
+            # Process the image
+            with st.spinner("Processing receipt..."):
+                image_bytes = uploaded_file.getvalue()
+                results = scan_receipt_from_image(image_bytes)
+            
+            if "error" in results:
+                st.error(f"❌ Error: {results['error']}")
+                
+                # Show helpful setup instructions
+                st.markdown("### 🔧 Setup Instructions")
+                st.markdown("""
+                **For Streamlit Cloud Deployment (REQUIRED FOR ONLINE ACCESS):**
+                
+                The app needs Google Cloud Vision API credentials to work. Here's how to fix this:
+                
+                1. **Go to your Streamlit Cloud app dashboard**
+                2. **Click on your app settings** (gear icon)
+                3. **Navigate to the "Secrets" section** in the left sidebar
+                4. **Copy the following template and fill in your actual values:**
+                
+                ```toml
+                [gcp_service_account]
+                type = "service_account"
+                project_id = "ocrproject-469323"
+                private_key_id = "your-private-key-id-from-json-file"
+                private_key = "-----BEGIN PRIVATE KEY-----\\nYour private key here\\n-----END PRIVATE KEY-----\\n"
+                client_email = "vision-ocr-service@ocrproject-469323.iam.gserviceaccount.com"
+                client_id = "your-client-id-from-json-file"
+                auth_uri = "https://accounts.google.com/o/oauth2/auth"
+                token_uri = "https://oauth2.googleapis.com/token"
+                auth_provider_x509_cert_url = "https://www.googleapis.com/oauth2/v1/certs"
+                client_x509_cert_url = "https://www.googleapis.com/robot/v1/metadata/x509/vision-ocr-service%40ocrproject-469323.iam.gserviceaccount.com"
+                universe_domain = "googleapis.com"
+                ```
+                
+                5. **Important**: Copy the values from your `service-account-key.json` file
+                6. **Save the secrets** and the app will automatically restart
+                
+                **For Local Testing:**
+                ✅ **Good News**: Your `service-account-key.json` file is detected in the project directory!
+                
+                If you're testing locally and still seeing errors:
+                ```bash
+                # Stop the app (Ctrl+C) then restart:
+                streamlit run streamlit_app.py
+                ```
+                """)
+                
+                # Show a sample of what the secrets should look like
+                st.info("💡 **Tip**: The values you need are in your local `service-account-key.json` file. Copy each field exactly as shown in that file.")
+            else:
+                # Display results in a nice format
+                st.success("✅ Receipt processed successfully!")
+                
+                # Results cards
+                if results["store_name"]:
+                    st.metric("🏪 Store Name", results["store_name"])
+                else:
+                    st.warning("Store name not detected")
+                
+                if results["total_amount"]:
+                    st.metric("💰 Total Amount", results["total_amount"])
+                else:
+                    st.warning("Total amount not detected")
+                
+                if results["date"]:
+                    st.metric("📅 Date", results["date"])
+                else:
+                    st.warning("Date not detected")
+                
+                # JSON output
+                st.subheader("📋 JSON Output")
+                st.json({
+                    "store_name": results["store_name"],
+                    "total_amount": results["total_amount"], 
+                    "date": results["date"]
+                })
+                
+                # Raw text (expandable)
+                with st.expander("🔍 Raw OCR Text"):
+                    st.text(results["raw_text"])
+
+if __name__ == "__main__":
+    main()

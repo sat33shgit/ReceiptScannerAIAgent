@@ -3,30 +3,15 @@ Ultra-minimal Receipt Scanner API - Guaranteed to work
 """
 import os
 import json
-<<<<<<< HEAD
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 
 app = Flask(__name__, template_folder='templates')
-=======
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-
-app = Flask(__name__)
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
 CORS(app)
 
 @app.route('/')
 def home():
-<<<<<<< HEAD
     return render_template('index.html')
-=======
-    return jsonify({
-        "message": "Receipt Scanner API is running!",
-        "endpoints": ["/api/health", "/api/scan"],
-        "status": "online"
-    })
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
 
 @app.route('/api/health')
 def health():
@@ -46,10 +31,6 @@ def scan_receipt():
                 "success": False,
                 "error": "No receipt_image file provided. Please upload an image."
             }), 400
-<<<<<<< HEAD
-=======
-        
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
         file = request.files['receipt_image']
         if file.filename == '':
             return jsonify({
@@ -165,7 +146,6 @@ def scan_receipt():
 
 def extract_store_name(text):
     """Extract store name from text"""
-<<<<<<< HEAD
     import re
     if not text:
         lines = []
@@ -219,17 +199,6 @@ def extract_store_name(text):
             return 'BC Ferries'
     # Check for other known stores and keywords in all lines
     for line in lines:
-=======
-    if not text:
-        return None
-    
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    if not lines:
-        return None
-    
-    # Check for known stores
-    for line in lines[:3]:  # Check first 3 lines
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
         line_upper = line.upper()
         if 'COSTCO' in line_upper:
             return 'Costco'
@@ -243,7 +212,6 @@ def extract_store_name(text):
             return 'Canadian Tire'
         elif 'OLD NAVY' in line_upper:
             return 'Old Navy'
-<<<<<<< HEAD
         elif 'PETRO-CANADA' in line_upper or 'PETRO CANADA' in line_upper:
             return 'Petro-Canada'
         elif 'SAVE-ON-FOODS' in line_upper or 'SAVE ON FOODS' in line_upper:
@@ -254,9 +222,6 @@ def extract_store_name(text):
     for line in lines:
         if line.strip() and line.strip().isupper() and 'TRANSACTION RECORD' not in line.upper():
             return line.strip()
-=======
-    
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
     # Return first non-empty line if no known store found
     return lines[0] if lines else None
 
@@ -266,7 +231,6 @@ def extract_total_amount(text):
     if not text:
         return None
     
-<<<<<<< HEAD
     # Specifically extract amount from 'Balance Due' or 'Credit' lines
     import re
     lines = text.split('\n')
@@ -312,15 +276,6 @@ def extract_total_amount(text):
         r'\$(\d+\.\d{2})',
         r'(\d+\.\d{2})'
     ]
-=======
-    # Look for currency patterns
-    patterns = [
-        r'TOTAL.*?\$(\d+\.\d{2})',
-        r'\$(\d+\.\d{2})',
-        r'(\d+\.\d{2})'
-    ]
-    
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
     amounts = []
     for pattern in patterns:
         matches = re.findall(pattern, text, re.IGNORECASE)
@@ -330,18 +285,9 @@ def extract_total_amount(text):
                 amounts.append(amount)
             except:
                 continue
-<<<<<<< HEAD
     if amounts:
         max_amount = max(amounts)
         return f"CAD {max_amount:.2f}"
-=======
-    
-    if amounts:
-        # Return the largest amount (likely the total)
-        max_amount = max(amounts)
-        return f"CAD {max_amount:.2f}"
-    
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
     return None
 
 def extract_date(text):
@@ -350,7 +296,6 @@ def extract_date(text):
     if not text:
         return None
     
-<<<<<<< HEAD
     import re
     import datetime
     import calendar
@@ -423,22 +368,6 @@ def extract_date(text):
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'), 'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
-=======
-    # Date patterns
-    patterns = [
-        r'(\d{4}/\d{1,2}/\d{1,2})',
-        r'(\d{1,2}/\d{1,2}/\d{4})',
-        r'(\d{1,2}/\d{1,2}/\d{2})'
-    ]
-    
-    for pattern in patterns:
-        match = re.search(pattern, text)
-        if match:
-            return match.group(1)
-    
-    return None
-
->>>>>>> 3ebf50df9e98234098e6ef54e601efbcfe5cc5bc
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False)
