@@ -29,41 +29,50 @@ st.set_page_config(
 
 # Helper functions (same as your main script)
 def extract_store_name(text: str) -> Optional[str]:
-    known_stores = [
-        "COSTCO WHOLESALE", "COSTCO", "WALMART", "SAVE ON FOODS", "HMART", 
-        "LONDON DRUGS LIMITED", "LONDON DRUGS", "SUPERSTORE", "PHARMASAVE",
-        "CANADIAN TIRE", "TRIANGLE"
-    ]
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    
+    import re
+    if not text:
+        lines = []
+    else:
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+    if not lines:
+        return None
+    # Robustly detect 'Hmart' even with OCR errors
+    hmart_pattern = re.compile(r'\b[hg][m][a][r][t]\b', re.IGNORECASE)
     for line in lines:
-        for store in known_stores:
-            if store in line.upper():
-                if "LONDON DRUGS" in store:
-                    return "London Drugs"
-                elif "COSTCO" in store:
-                    return "Costco"
-                elif "WALMART" in store:
-                    return "Walmart"
-                elif "SAVE ON FOODS" in store:
-                    return "Save On Foods"
-                elif "HMART" in store:
-                    return "Hmart"
-                elif "SUPERSTORE" in store:
-                    return "Superstore"
-                elif "PHARMASAVE" in store:
-                    return "Pharmasave"
-                elif "CANADIAN TIRE" in store or "TRIANGLE" in store:
-                    return "Canadian Tire"
-    
-    generic_headers = ["TRANSACTION RECORD", "RECEIPT", "CUSTOMER COPY", "MERCHANT COPY"]
+        if hmart_pattern.search(line):
+            return 'Hmart'
+    # Prioritize 'BC Ferries' if found anywhere (match variations)
+    bc_ferries_pattern = re.compile(r'bc\s*ferries', re.IGNORECASE)
     for line in lines:
-        if line.upper() not in generic_headers and len(line.strip()) > 2:
-            return line
-    
-    if lines:
-        return lines[0]
-    return None
+        if bc_ferries_pattern.search(line):
+            return 'BC Ferries'
+    # Check for other known stores and keywords in all lines
+    for line in lines:
+        line_upper = line.upper()
+        if 'COSTCO' in line_upper:
+            return 'Costco'
+        elif 'WALMART' in line_upper:
+            return 'Walmart'
+        elif 'LONDON DRUGS' in line_upper:
+            return 'London Drugs'
+        elif 'PHARMASAVE' in line_upper:
+            return 'Pharmasave'
+        elif 'CANADIAN TIRE' in line_upper:
+            return 'Canadian Tire'
+        elif 'OLD NAVY' in line_upper:
+            return 'Old Navy'
+        elif 'PETRO-CANADA' in line_upper or 'PETRO CANADA' in line_upper:
+            return 'Petro-Canada'
+        elif 'SAVE-ON-FOODS' in line_upper or 'SAVE ON FOODS' in line_upper:
+            return 'Save-On-Foods'
+        elif 'CARTER' in line_upper or 'OSHKOSH' in line_upper:
+            return line.strip()
+    # Fallback: avoid generic phrases like 'TRANSACTION RECORD'
+    for line in lines:
+        if line.strip() and line.strip().isupper() and 'TRANSACTION RECORD' not in line.upper():
+            return line.strip()
+    # Return first non-empty line if no known store found
+    return lines[0] if lines else None
 
 def extract_total_amount(text: str) -> Optional[str]:
     import re
