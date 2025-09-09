@@ -299,7 +299,8 @@ def main():
     uploaded_file = st.file_uploader(
         "Choose a receipt image", 
         type=['jpg', 'jpeg', 'png'],
-        help="Upload a clear image of your receipt"
+        help="Upload a clear image of your receipt",
+        key="receipt_uploader_main"
     )
     
     if uploaded_file is not None:
