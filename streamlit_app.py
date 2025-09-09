@@ -166,6 +166,7 @@ def extract_date(text: str) -> Optional[str]:
         r'(\d{4}/\d{1,2}/\d{1,2})',
         r'(\d{1,2}/\d{1,2}/\d{4})',
         r'(\d{1,2}/\d{1,2}/\d{2})',
+        r'(\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})',  # YY/MM/DD HH:MM:SS
         r'(\d{2} [A-Za-z]{3} \d{4})',  # e.g., 02 Sep 2025
         r'([A-Za-z]{3}\s?\d{1,2}\'\d{2})'  # e.g., Aug31'25 or Aug 31'25
     ]
@@ -174,41 +175,42 @@ def extract_date(text: str) -> Optional[str]:
         matches += re.findall(pattern, text)
     for date_str in matches:
         try:
-            # YY/MM/DD HH:MM:SS (e.g., 25/08/31 19:35:27)
-            m = re.match(r'(\d{2})/(\d{2})/(\d{2})[\sT](\d{2}:\d{2}:\d{2})?', date_str)
+            # If date_str contains time, split and use only the date part
+            if ' ' in date_str:
+                date_part = date_str.split(' ')[0]
+            else:
+                date_part = date_str
+            # YY/MM/DD
+            m = re.match(r'^(\d{2})/(\d{2})/(\d{2})$', date_part)
             if m:
-                year, month, day = map(int, m.groups()[:3])
+                year, month, day = map(int, m.groups())
                 year += 2000
                 if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
                     return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
             # YYYY-MM-DD
-            if re.match(r'\d{4}-\d{2}-\d{2}', date_str):
-                year, month, day = map(int, date_str.split('-'))
+            if re.match(r'^\d{4}-\d{2}-\d{2}$', date_part):
+                year, month, day = map(int, date_part.split('-'))
                 if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
-                    return date_str
-            # YYYY-MM-DD HH:MM
-            if re.match(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', date_str):
-                year, month, day = map(int, date_str.split()[0].split('-'))
-                if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
-                    return date_str.split()[0]
+                    return date_part
             # YYYY/MM/DD
-            if re.match(r'\d{4}/\d{1,2}/\d{1,2}', date_str):
-                year, month, day = map(int, date_str.split('/'))
+            if re.match(r'^\d{4}/\d{1,2}/\d{1,2}$', date_part):
+                year, month, day = map(int, date_part.split('/'))
                 if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
                     return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
             # MM/DD/YYYY
-            if re.match(r'\d{1,2}/\d{1,2}/\d{4}', date_str):
-                month, day, year = map(int, date_str.split('/'))
+            if re.match(r'^\d{1,2}/\d{1,2}/\d{4}$', date_part):
+                month, day, year = map(int, date_part.split('/'))
                 if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
                     return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
             # MM/DD/YY
-            if re.match(r'\d{1,2}/\d{1,2}/\d{2}', date_str):
-                month, day, year = map(int, date_str.split('/'))
+            m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{2})$', date_part)
+            if m:
+                month, day, year = map(int, m.groups())
                 year += 2000
                 if 2000 <= year <= 2100 and 1 <= month <= 12 and 1 <= day <= 31:
                     return f"{year}-{str(month).zfill(2)}-{str(day).zfill(2)}"
             # 02 Sep 2025
-            m = re.match(r'(\d{2}) ([A-Za-z]{3}) (\d{4})', date_str)
+            m = re.match(r'^(\d{2}) ([A-Za-z]{3}) (\d{4})$', date_part)
             if m:
                 day, month_str, year = m.groups()
                 month = list(calendar.month_abbr).index(month_str[:3].title())
@@ -217,7 +219,7 @@ def extract_date(text: str) -> Optional[str]:
                     dt = datetime.date(year, month, int(day))
                     return dt.strftime('%Y-%m-%d')
             # Aug31'25 or Aug 31'25
-            m = re.match(r'([A-Za-z]{3})\s?(\d{1,2})\'(\d{2})', date_str)
+            m = re.match(r'^([A-Za-z]{3})\s?(\d{1,2})\'(\d{2})$', date_part)
             if m:
                 month_str, day, year = m.groups()
                 month = list(calendar.month_abbr).index(month_str[:3].title())
